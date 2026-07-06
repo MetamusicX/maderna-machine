@@ -42,7 +42,8 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Deploy: `netlify deploy` (publish directory `.`).
+Deploy: pushes to `main` auto-deploy to Netlify (self-managed Git link); manual
+fallback: `npx netlify-cli deploy --prod --dir .`.
 
 ## Honesty note
 
