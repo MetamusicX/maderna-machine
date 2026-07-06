@@ -10,6 +10,8 @@ Part of Paulo de Assis's **compositional-machines series**, after the
 [Lachenmann-machine](https://github.com/MetamusicX/Lachenmann-machine_zeitnetz-generator)
 and the Zeitnetz generators.
 
+**Live: <https://maderna-machine.netlify.app>**
+
 ## What it does
 
 Type **one twelve-tone row** and immediately see it as a 12×12 **square** and as
