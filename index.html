@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maderna Machine — Magic Squares</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #d9a441;        /* Venetian gold */
+    --accent-soft: rgba(217, 164, 65, 0.14);
+    --accent2: #533483;
+    --accent3: #0891b2;
+    --text: #eee;
+    --text2: #aab;
+    --input-bg: #0d1b3e;
+    --border: #2a3a5e;
+    --success: #4ade80;
+    --warn: #fbbf24;
+    --error: #f87171;
+    --mono: 'SF Mono', Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.55;
+    padding: 24px 14px 60px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  h1 { font-size: 26px; letter-spacing: 0.02em; }
+  h1 .gold { color: var(--accent); }
+  .subtitle { color: var(--text2); font-size: 14px; margin: 4px 0 10px; }
+  .desc { font-size: 13.5px; color: var(--text2); max-width: 66ch; }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h3 {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text2);
+    margin: 20px 0 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #14142a;
+    border: none;
+    border-radius: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 9px 16px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+  .btn.ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  input[type="text"], input[type="number"], textarea {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13.5px;
+    padding: 9px 12px;
+    width: 100%;
+  }
+  input:focus, textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  input[type="number"] { width: 90px; }
+  label { font-size: 13px; }
+  .hint { color: var(--text2); font-size: 12px; margin-top: 5px; }
+  .field { margin-bottom: 14px; }
+  .field-title {
+    display: block;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .radio-row label { display: block; margin: 3px 0; cursor: pointer; }
+  .radio-row input { margin-right: 7px; accent-color: var(--accent); }
+  input[type="checkbox"] { accent-color: var(--accent); margin-right: 7px; }
+  input[type="range"] { accent-color: var(--accent); flex: 1; }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; }
+  @media (max-width: 700px) { .param-grid { grid-template-columns: 1fr; } }
+  .param.dim { opacity: 0.38; pointer-events: none; }
+  .readout { font-family: var(--mono); font-size: 12px; color: var(--success); margin-top: 6px; }
+  .readout.bad { color: var(--warn); }
+  .svg-scroll { overflow-x: auto; padding: 6px 0; }
+  .svg-scroll svg { display: block; }
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 999px;
+    padding: 2px 12px;
+    margin-left: 10px;
+    vertical-align: 2px;
+    background: var(--surface2);
+    color: var(--text2);
+  }
+  .pill.loading { background: #3b3560; color: var(--warn); }
+  .pill.running { background: #3b3560; color: var(--accent); }
+  .pill.done { background: #143d2b; color: var(--success); }
+  .pill.error { background: #4a1f2b; color: var(--error); }
+  #log {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    height: 190px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    color: var(--text2);
+  }
+  #log .warn { color: var(--warn); }
+  #log .err { color: var(--error); }
+  .dl-list { display: flex; flex-direction: column; gap: 8px; }
+  a.dl {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 14px;
+    background: var(--input-bg);
+  }
+  a.dl:hover { border-color: var(--accent); }
+  a.dl .size { color: var(--text2); font-size: 11px; }
+  .stepper { display: flex; align-items: center; gap: 12px; margin: 10px 0 4px; }
+  .stepper .btn { padding: 5px 12px; }
+  #sq-label { font-family: var(--mono); font-size: 15px; color: var(--accent); min-width: 46px; text-align: center; }
+  #sq-stats { font-family: var(--mono); font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+  table.cls {
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  table.cls th, table.cls td {
+    border: 1px solid var(--border);
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+    min-width: 54px;
+  }
+  table.cls th { color: var(--text2); background: var(--surface2); font-weight: 600; white-space: nowrap; }
+  .chip {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 1px 5px;
+    margin: 1px;
+    cursor: pointer;
+  }
+  .chip:hover { background: var(--accent); color: #14142a; }
+  details { margin-top: 12px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--text2); }
+  .reading-list { font-family: var(--mono); font-size: 11.5px; color: var(--text2); margin-top: 8px; line-height: 2; }
+  .reading-list b { color: var(--accent); font-weight: 600; }
+  #about { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; font-size: 13px; color: var(--text2); }
+  #about p { margin-bottom: 10px; max-width: 74ch; }
+  #about .coding { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  #machine-body { display: none; margin-top: 16px; }
+  .results { display: none; margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+  footer { text-align: center; color: var(--text2); font-size: 12px; margin-top: 30px; }
+  #overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; text-align: center; padding: 20px;
+  }
+  .spin {
+    width: 42px; height: 42px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .legend .chip { cursor: default; }
+  .legend .chip:hover { background: var(--accent-soft); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="spin"></div>
+  <div>
+    <strong>Loading Python runtime ~20&nbsp;MB…</strong><br>
+    <span style="color:var(--text2);font-size:13px">Pyodide boots once, then everything runs locally in your browser.</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============================== HEADER ============================== -->
+  <header class="card">
+    <h1>Maderna Machine — <span class="gold">Magic Squares</span></h1>
+    <div class="subtitle">Bruno Maderna's shifting technique (1951), reconstructed</div>
+    <p class="desc">
+      Type one twelve-tone row and see it as a square and as rhythmless note-heads;
+      then unfold the full machine — magic square + shifting factors → derived squares →
+      108 sets → rhythmic realization — with MusicXML downloads at every stage.
+      After Veniero Rizzardi's study of the serial machine behind <em>Improvvisazione n.&nbsp;1</em>.
+    </p>
+    <div class="btn-row">
+      <button class="btn" id="btn-example">Load <em>Improvvisazione n. 1</em></button>
+      <button class="btn ghost" id="btn-reset">Reset to defaults</button>
+      <button class="btn ghost" id="btn-about">Method / About ▸</button>
+    </div>
+    <div id="about">
+      <p><strong style="color:var(--text)">The technique.</strong>
+      Maderna turns a single twelve-tone row into a large field of derived material by graphic
+      manipulation on squared paper. The row is drawn as a 12×12 square (pitches × time-positions,
+      one dot per column). A separate <em>magic square</em> — a Latin square of 12 symbols — maps,
+      via a key, to integer <em>shifting factors</em>; applied note-by-note, each factor says how far
+      to the right the next dot is drawn, advancing across a strip of successive charts. The derived
+      squares contain repeated dots, vertical aggregates (Maderna's "harmonic projection") and empty
+      columns (rests): the row has <em>mutated</em> (mutazione) from a theme into a generative
+      distribution. Nine "proportions" (A–I) yield 9 × 12 = 108 sets, ordered by a classification
+      chart — the "structural key of the whole piece" — and realized rhythmically through three dance
+      patterns (waltz, polka, cancan) in an isorhythmic-motet logic.</p>
+      <p><strong style="color:var(--text)">Honesty note.</strong>
+      The exact arithmetic of wrapping, of how empty boxes and aggregates arise, and of the reading
+      order is <em>reconstructed</em> from Rizzardi's description of Maderna's sketches — it is
+      <strong>not</strong> a fully specified historical algorithm. This app implements a clean,
+      self-consistent, parameterized model that faithfully reproduces the documented
+      <em>behavior</em> (heterogeneous sets of notes, aggregates and rests; 108 squares across 9
+      proportions; the mutation of the row; a classification chart) and exposes the parameters so you
+      can experiment. It is a computational reconstruction, not a box-for-box reproduction of the
+      sketches. Note also that Maderna's magic square and shift-factor key were themselves
+      <strong>compositional choices, independent of the row</strong> — the app defaults them so a
+      single row runs the whole machine, but exposes them because the <em>apparatus</em>, not the row
+      alone, is what generates the music.</p>
+      <p><strong style="color:var(--text)">Model choices in this reconstruction.</strong>
+      Each proportion takes 12 derivation steps; step <em>j</em> of proportion <em>P</em> reads row
+      (<em>j</em>+<em>P</em>) mod 12 of the magic square (even proportions) or the corresponding
+      column (odd proportions), so each proportion reads the apparatus differently. Every pitch
+      collects each factor exactly once per cycle, advancing by the full factor sum — hence the
+      pattern returns to its start and seeds the next proportion. The trail of dots is cut back into
+      12×12 charts; early dots may re-enter the first chart (a documented "repeated dot" phenomenon).</p>
+      <p><strong style="color:var(--text)">Pitch coding</strong> (Maderna's, chromatic from A):<br>
+      <span class="coding">1=A · 2=B♭ · 3=B · 4=C · 5=C♯ · 6=D · 7=E♭ · 8=E · 9=F · 10=F♯ · 11=G · 12=A♭</span></p>
+      <p><strong style="color:var(--text)">Source.</strong> Veniero Rizzardi, "The Tone Row, Squared:
+      Bruno Maderna and the Birth of Serial Music in Italy," in M. Delaere (ed.),
+      <em>Rewriting Recent Music History</em> (Peeters, 2011), pp. 45–65.
+      Part of Paulo de Assis's compositional-machines series, after the Lachenmann-machine and the
+      Zeitnetz generators.</p>
+    </div>
+  </header>
+
+  <!-- ============================== PHASE 1 ============================== -->
+  <section class="card">
+    <h2>Phase 1 — The Row &amp; the Square</h2>
+    <div class="field">
+      <label class="field-title" for="row-input">Tone row (the only required input)</label>
+      <input type="text" id="row-input" value="2 1 6 10 5 4 9 8 3 7 12 11" spellcheck="false">
+      <div class="hint">Accepted: Maderna coding 1–12 (1=A … 12=A♭), pitch classes 0–11, or note
+      names (<span style="font-family:var(--mono)">bb a d f# c# c f e b eb g# g</span>; German H=B, B=B♭ tolerated).</div>
+    </div>
+    <button class="btn" id="btn-phase1" disabled>Generate Square</button>
+    <div class="results" id="p1-results">
+      <h3>The basic square A1 — one dot per column</h3>
+      <div class="svg-scroll" id="a1-view"></div>
+      <h3>The row as rhythmless note-heads — a pure pitch map</h3>
+      <div class="svg-scroll" id="noteheads-view"></div>
+      <h3>Download</h3>
+      <div class="dl-list" id="p1-downloads"></div>
+    </div>
+  </section>
+
+  <!-- ============================== PHASE 2 ============================== -->
+  <section class="card">
+    <h2 style="margin-bottom:0">
+      <button class="btn ghost" id="btn-unfold" style="text-transform:none;letter-spacing:0">▸ Unfold the machine — Phase 2</button>
+    </h2>
+    <div id="machine-body">
+      <div class="param-grid">
+        <div class="param" id="param-magic">
+          <span class="field-title">Magic square</span>
+          <div class="radio-row">
+            <label><input type="radio" name="magic-mode" value="historical" checked> Historical reconstruction</label>
+            <label><input type="radio" name="magic-mode" value="auto"> Auto from seed</label>
+            <label><input type="radio" name="magic-mode" value="custom"> Custom paste</label>
+          </div>
+          <div id="magic-seed-row" style="display:none;margin-top:8px">
+            <label for="magic-seed" style="color:var(--text2)">Seed&nbsp;</label>
+            <input type="number" id="magic-seed" value="1951">
+          </div>
+          <textarea id="magic-custom" rows="5" style="display:none;margin-top:8px"
+            placeholder="Paste a 12×12 grid of symbols 1–12 (whitespace-separated). Latin-ness is validated."></textarea>
+        </div>
+        <div class="param" id="param-factors">
+          <span class="field-title">Shifting-factor key (12 integers)</span>
+          <input type="text" id="factors" value="14 14 5 11 25 10 6 9 8 13 5 12" spellcheck="false">
+          <div class="readout" id="factors-readout"></div>
+          <div class="hint">The sum should be a multiple of 12; sum ÷ 12 = derived squares per proportion.</div>
+        </div>
+        <div class="param">
+          <span class="field-title">Number of proportions</span>
+          <input type="number" id="n-prop" min="1" max="12" value="9">
+          <div class="readout" id="prop-readout"></div>
+        </div>
+        <div class="param">
+          <span class="field-title">Rhythm mapping</span>
+          <div class="radio-row">
+            <label><input type="radio" name="rhythm" value="dances" checked> Three dances (waltz 3/4 · polka 2/4 · cancan 2/4)</label>
+            <label><input type="radio" name="rhythm" value="single"> Single meter (4/4, equal values)</label>
+          </div>
+        </div>
+        <div class="param" style="grid-column:1/-1">
+          <label><input type="checkbox" id="derive-row"> <strong>Derive the machine from this row</strong></label>
+          <div class="hint">When on, the magic-square and factor fields are ignored: a cyclic Latin
+          square is built from the row and the factors are sums of consecutive row entries — the row
+          becomes the sole determinant of the output.</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btn-generate" disabled>Generate Full Realization</button>
+      </div>
+
+      <div class="results" id="p2-results">
+        <h3>Derived squares — walk the strip</h3>
+        <div class="stepper">
+          <button class="btn ghost" id="sq-prev">◀</button>
+          <input type="range" id="sq-slider" min="0" max="0" value="0">
+          <button class="btn ghost" id="sq-next">▶</button>
+          <span id="sq-label">A1</span>
+        </div>
+        <div id="sq-stats"></div>
+        <div class="svg-scroll" id="sq-view"></div>
+        <h3>The magic square — symbols → shifting factors</h3>
+        <div class="svg-scroll" id="magic-view"></div>
+        <div class="legend" id="magic-legend"></div>
+        <h3>Classification chart — the structural key of the whole piece</h3>
+        <div class="hint" style="margin-bottom:8px">Rows: repeated sounds · columns: empty (void)
+        columns per set. Click a set to view its square.</div>
+        <div class="svg-scroll" id="chart-view"></div>
+        <details>
+          <summary>Reading order (columns walked down/up alternately; sets alternately prime / <b>retro</b>)</summary>
+          <div class="reading-list" id="reading-view"></div>
+        </details>
+        <h3>Downloads</h3>
+        <div class="dl-list" id="p2-downloads"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== LOG ============================== -->
+  <section class="card">
+    <h2 style="margin-bottom:10px">Log <span class="pill" id="pill">idle</span></h2>
+    <div id="log"></div>
+  </section>
+
+  <footer>© 2026 Paulo de Assis · Runs entirely in your browser (Pyodide) — no server.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js" crossorigin="anonymous"></script>
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ state */
+let pyodide = null;
+const G = {
+  squares: null,      // phase-2 payload: labels, grids, stats, magic
+  chart: null,
+  current: 0,         // stepper index
+  urls: [],           // blob URLs to revoke
+};
+
+const EXAMPLE = {
+  row: "2 1 6 10 5 4 9 8 3 7 12 11",
+  factors: "14 14 5 11 25 10 6 9 8 13 5 12",
+  nProp: 9,
+};
+
+const PITCH_LABELS = ["A", "B♭", "B", "C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭"];
+const $ = (sel) => document.querySelector(sel);
+
+/* ------------------------------------------------------------------ log & status */
+function setStatus(state) {
+  const pill = $("#pill");
+  pill.className = "pill " + state;
+  pill.textContent = state;
+}
+function appendLog(text) {
+  const box = $("#log");
+  for (const line of String(text).split("\n")) {
+    if (!line.trim()) continue;
+    const div = document.createElement("div");
+    if (/^WARNING/i.test(line)) div.className = "warn";
+    if (/Traceback|Error/i.test(line) && !/^WARNING/i.test(line)) div.className = "err";
+    div.textContent = line;
+    box.appendChild(div);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ------------------------------------------------------------------ pyodide bridge */
+async function callApi(fn, ...args) {
+  args.forEach((a, i) => pyodide.globals.set("ARG" + i, JSON.stringify(a)));
+  const expr = fn + "(" + args.map((_, i) => "ARG" + i).join(", ") + ")";
+  const res = await pyodide.runPythonAsync(expr);
+  return JSON.parse(res);
+}
+
+/* ------------------------------------------------------------------ SVG: 12x12 square */
+function pretty(name) { return name.replace(/^(.)b$/, "$1♭").replace(/#/, "♯"); }
+
+function renderSquare(container, grid) {
+  const cell = 26, lw = 36, lh = 20, pad = 6;
+  const W = lw + 12 * cell + pad, H = lh + 12 * cell + pad;
+  const colCounts = [];
+  for (let c = 0; c < 12; c++) {
+    let n = 0;
+    for (let r = 0; r < 12; r++) n += grid[r][c];
+    colCounts.push(n);
+  }
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="SF Mono,Menlo,Consolas,monospace">`;
+  // column overlays: aggregates (gold) and voids (dim)
+  for (let c = 0; c < 12; c++) {
+    const x = lw + c * cell;
+    if (colCounts[c] >= 2)
+      s += `<rect x="${x}" y="${lh}" width="${cell}" height="${12 * cell}" fill="rgba(217,164,65,0.13)"/>`;
+    else if (colCounts[c] === 0)
+      s += `<rect x="${x}" y="${lh}" width="${cell}" height="${12 * cell}" fill="rgba(0,0,0,0.32)"/>`;
+  }
+  // grid lines
+  for (let i = 0; i <= 12; i++) {
+    const y = lh + i * cell, x = lw + i * cell;
+    s += `<line x1="${lw}" y1="${y}" x2="${lw + 12 * cell}" y2="${y}" stroke="#2a3a5e" stroke-width="1"/>`;
+    s += `<line x1="${x}" y1="${lh}" x2="${x}" y2="${lh + 12 * cell}" stroke="#2a3a5e" stroke-width="1"/>`;
+  }
+  // labels
+  for (let c = 0; c < 12; c++)
+    s += `<text x="${lw + c * cell + cell / 2}" y="${lh - 6}" font-size="10" fill="#aab" text-anchor="middle">${c + 1}</text>`;
+  for (let r = 0; r < 12; r++)
+    s += `<text x="${lw - 7}" y="${lh + r * cell + cell / 2 + 3.5}" font-size="10" fill="#aab" text-anchor="end">${PITCH_LABELS[r]}</text>`;
+  // dots
+  for (let r = 0; r < 12; r++)
+    for (let c = 0; c < 12; c++) {
+      const n = grid[r][c];
+      if (!n) continue;
+      const cx = lw + c * cell + cell / 2, cy = lh + r * cell + cell / 2;
+      s += `<circle cx="${cx}" cy="${cy}" r="8" fill="#d9a441"/>`;
+      if (n > 1)
+        s += `<text x="${cx}" y="${cy + 3.5}" font-size="10" font-weight="bold" fill="#14142a" text-anchor="middle">${n}</text>`;
+    }
+  s += "</svg>";
+  container.innerHTML = s;
+}
+
+/* ------------------------------------------------------------------ SVG: magic square */
+function renderMagic(container, legend, magic, key) {
+  const cell = 34, lw = 26, lh = 20, pad = 6;
+  const W = lw + 12 * cell + pad, H = lh + 12 * cell + pad;
+  const kmin = Math.min(...key), kmax = Math.max(...key);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="SF Mono,Menlo,Consolas,monospace">`;
+  for (let i = 0; i < 12; i++) {
+    s += `<text x="${lw + i * cell + cell / 2}" y="${lh - 6}" font-size="9" fill="#aab" text-anchor="middle">${i + 1}</text>`;
+    s += `<text x="${lw - 6}" y="${lh + i * cell + cell / 2 + 3}" font-size="9" fill="#aab" text-anchor="end">${i + 1}</text>`;
+  }
+  for (let r = 0; r < 12; r++)
+    for (let c = 0; c < 12; c++) {
+      const sym = magic[r][c], f = key[sym - 1];
+      const t = kmax > kmin ? (f - kmin) / (kmax - kmin) : 0.5;
+      const x = lw + c * cell, y = lh + r * cell;
+      s += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="#0f3460" stroke="#2a3a5e"/>`;
+      s += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="rgba(217,164,65,${(0.06 + t * 0.5).toFixed(2)})"/>`;
+      s += `<text x="${x + cell / 2}" y="${y + cell / 2 - 1}" font-size="11" font-weight="bold" fill="#eee" text-anchor="middle">${sym}</text>`;
+      s += `<text x="${x + cell / 2}" y="${y + cell / 2 + 11}" font-size="8" fill="#aab" text-anchor="middle">${f}</text>`;
+    }
+  s += "</svg>";
+  container.innerHTML = s;
+  legend.innerHTML = key.map((f, i) =>
+    `<span class="chip">symbol ${i + 1} → ${f}</span>`).join("") +
+    `<span class="chip">sum ${key.reduce((a, b) => a + b, 0)}</span>`;
+}
+
+/* ------------------------------------------------------------------ SVG: rhythmless note-heads */
+function renderNoteheads(container, notation) {
+  const startX = 78, dx = 48;
+  const W = startX + notation.length * dx + 16, H = 150;
+  const bottom = 75, half = 5; // E4 on bottom staff line, half-space = 5px
+  const stepIdx = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+  const posOf = (n) => (n.octave - 4) * 7 + stepIdx[n.step];
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  for (let i = 0; i < 5; i++) {
+    const y = bottom - i * 10;
+    s += `<line x1="14" y1="${y}" x2="${W - 12}" y2="${y}" stroke="#6a7aa0" stroke-width="1"/>`;
+  }
+  s += `<text x="16" y="88" font-size="72" fill="#eee">\u{1D11E}</text>`;
+  notation.forEach((n, i) => {
+    const cx = startX + i * dx + dx / 2;
+    const pos = posOf(n);
+    const cy = bottom - (pos - 2) * half;
+    for (let p = 0; p >= pos; p -= 2) {  // ledger lines below the staff
+      const ly = bottom - (p - 2) * half;
+      s += `<line x1="${cx - 11}" y1="${ly}" x2="${cx + 11}" y2="${ly}" stroke="#6a7aa0" stroke-width="1"/>`;
+    }
+    if (n.alter === 1)
+      s += `<text x="${cx - 12}" y="${cy + 4}" font-size="15" fill="#eee" text-anchor="end">♯</text>`;
+    else if (n.alter === -1)
+      s += `<text x="${cx - 12}" y="${cy + 4}" font-size="15" fill="#eee" text-anchor="end">♭</text>`;
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="6.8" ry="4.8" fill="#eee" transform="rotate(-14 ${cx} ${cy})"/>`;
+    s += `<text x="${cx}" y="128" font-size="11" fill="#aab" text-anchor="middle" font-family="SF Mono,Menlo,Consolas,monospace">${pretty(n.name)}</text>`;
+  });
+  s += "</svg>";
+  container.innerHTML = s;
+}
+
+/* ------------------------------------------------------------------ classification chart */
+function renderChart(container, chart) {
+  let h = '<table class="cls"><tr><th>rep \\ void</th>';
+  for (const v of chart.void_values) h += `<th>${v}</th>`;
+  h += "</tr>";
+  chart.rep_values.forEach((r, ri) => {
+    h += `<tr><th>${r}</th>`;
+    chart.void_values.forEach((v, vi) => {
+      const cell = chart.cells[ri][vi];
+      h += "<td>" + (cell.length
+        ? cell.map((lab) => `<button class="chip" data-label="${lab}">${lab}</button>`).join("")
+        : '<span style="color:#2a3a5e">·</span>') + "</td>";
+    });
+    h += "</tr>";
+  });
+  h += "</table>";
+  container.innerHTML = h;
+  container.querySelectorAll(".chip").forEach((chip) =>
+    chip.addEventListener("click", () => {
+      const idx = G.squares.labels.indexOf(chip.dataset.label);
+      if (idx >= 0) { setStep(idx); $("#sq-view").scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }));
+}
+
+function renderReading(container, reading) {
+  container.innerHTML = reading.map((e) =>
+    e.retro ? `<b>${e.label}ᴿ</b>` : e.label).join(" → ");
+}
+
+/* ------------------------------------------------------------------ stepper */
+function setStep(idx) {
+  if (!G.squares) return;
+  const n = G.squares.labels.length;
+  G.current = Math.max(0, Math.min(n - 1, idx));
+  $("#sq-slider").value = G.current;
+  $("#sq-label").textContent = G.squares.labels[G.current];
+  const st = G.squares.stats[G.current];
+  $("#sq-stats").textContent =
+    `${st.dots} dots · ${st.filled}/12 columns filled · ` +
+    `${st.aggregates} aggregates · ${st.rests} rests · ${st.repeats} repeated sounds`;
+  renderSquare($("#sq-view"), G.squares.grids[G.current]);
+}
+
+/* ------------------------------------------------------------------ downloads */
+function renderDownloads(container, files) {
+  container.innerHTML = "";
+  for (const [name, content] of Object.entries(files)) {
+    const type = name.endsWith(".txt") ? "text/plain" : "application/xml";
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    G.urls.push(url);
+    const a = document.createElement("a");
+    a.className = "dl";
+    a.href = url;
+    a.download = name;
+    a.innerHTML = `⬇ ${name} <span class="size">(${Math.max(1, Math.round(content.length / 1024))} KB)</span>`;
+    container.appendChild(a);
+  }
+}
+
+/* ------------------------------------------------------------------ machine params */
+function collectMachine() {
+  return {
+    magic_mode: document.querySelector('input[name="magic-mode"]:checked').value,
+    magic_seed: $("#magic-seed").value,
+    magic_custom: $("#magic-custom").value,
+    factors: $("#factors").value,
+    n_proportions: parseInt($("#n-prop").value, 10) || 9,
+    rhythm_mode: document.querySelector('input[name="rhythm"]:checked').value,
+    derive_from_row: $("#derive-row").checked,
+  };
+}
+
+function updateReadouts() {
+  const out = $("#factors-readout"), pout = $("#prop-readout");
+  const tokens = $("#factors").value.trim().split(/[\s,;]+/).filter(Boolean);
+  const nums = tokens.map(Number);
+  const nProp = parseInt($("#n-prop").value, 10) || 9;
+  if (tokens.length !== 12 || nums.some((n) => !Number.isInteger(n) || n < 1)) {
+    out.className = "readout bad";
+    out.textContent = `needs 12 positive integers (${tokens.length} given)`;
+    pout.textContent = "";
+    return;
+  }
+  const sum = nums.reduce((a, b) => a + b, 0);
+  const ok = sum % 12 === 0;
+  out.className = ok ? "readout" : "readout bad";
+  out.textContent = `sum = ${sum} · sum ÷ 12 = ${(sum / 12).toFixed(ok ? 0 : 2)} derived squares per proportion`
+    + (ok ? "" : " — not a multiple of 12: seeds will drift");
+  const charts = Math.ceil(sum / 12) + 1;
+  pout.className = "readout";
+  pout.textContent = `→ ${nProp} × ${charts} = ${nProp * charts} sets`;
+}
+
+function syncMagicVisibility() {
+  const mode = document.querySelector('input[name="magic-mode"]:checked').value;
+  $("#magic-seed-row").style.display = mode === "auto" ? "block" : "none";
+  $("#magic-custom").style.display = mode === "custom" ? "block" : "none";
+  const derived = $("#derive-row").checked;
+  $("#param-magic").classList.toggle("dim", derived);
+  $("#param-factors").classList.toggle("dim", derived);
+}
+
+/* ------------------------------------------------------------------ actions */
+async function runPhase1() {
+  setStatus("running");
+  try {
+    const r = await callApi("api_phase1", $("#row-input").value);
+    appendLog(r.log);
+    if (r.error) { setStatus("error"); return false; }
+    renderSquare($("#a1-view"), r.squares.A1);
+    renderNoteheads($("#noteheads-view"), r.notation);
+    renderDownloads($("#p1-downloads"), r.files);
+    $("#p1-results").style.display = "block";
+    setStatus("done");
+    return true;
+  } catch (e) {
+    appendLog("Error: " + e.message);
+    setStatus("error");
+    return false;
+  }
+}
+
+async function runGenerate() {
+  setStatus("running");
+  try {
+    const r = await callApi("api_generate", $("#row-input").value, collectMachine());
+    appendLog(r.log);
+    if (r.error) { setStatus("error"); return false; }
+    G.squares = r.squares;
+    G.chart = r.chart;
+    $("#sq-slider").max = r.squares.labels.length - 1;
+    setStep(0);
+    renderMagic($("#magic-view"), $("#magic-legend"), r.squares.magic.grid, r.squares.magic.key);
+    renderChart($("#chart-view"), r.chart);
+    renderReading($("#reading-view"), r.chart.reading);
+    renderDownloads($("#p2-downloads"), r.files);
+    $("#p2-results").style.display = "block";
+    const s = r.summary;
+    appendLog(`Summary: ${s.n_sets} sets · ${s.n_aggregates} aggregates · ` +
+      `${s.n_rests} rests · ${s.n_classes} classes · factor sum ${s.factor_sum}` +
+      (s.factor_sum % 12 === 0 ? " (sum check OK)" : " (sum check: NOT a multiple of 12)"));
+    setStatus("done");
+    return true;
+  } catch (e) {
+    appendLog("Error: " + e.message);
+    setStatus("error");
+    return false;
+  }
+}
+
+function loadExample() {
+  $("#row-input").value = EXAMPLE.row;
+  $("#factors").value = EXAMPLE.factors;
+  $("#n-prop").value = EXAMPLE.nProp;
+  document.querySelector('input[name="magic-mode"][value="historical"]').checked = true;
+  document.querySelector('input[name="rhythm"][value="dances"]').checked = true;
+  $("#derive-row").checked = false;
+  $("#magic-custom").value = "";
+  $("#magic-seed").value = 1951;
+  syncMagicVisibility();
+  updateReadouts();
+  appendLog("Loaded Improvvisazione n. 1: row B♭ A D F♯ C♯ C F E B E♭ G♯ G, " +
+    "factors 14 14 5 11 25 10 6 9 8 13 5 12 (sum 132), 9 proportions, three dances.");
+}
+
+function openMachine(open) {
+  $("#machine-body").style.display = open ? "block" : "none";
+  $("#btn-unfold").textContent = (open ? "▾ Fold the machine — Phase 2" : "▸ Unfold the machine — Phase 2");
+}
+
+async function loadExampleAndRun() {
+  loadExample();
+  if (await runPhase1()) {
+    openMachine(true);
+    await runGenerate();
+  }
+}
+
+/* ------------------------------------------------------------------ wiring */
+$("#btn-phase1").addEventListener("click", runPhase1);
+$("#btn-generate").addEventListener("click", runGenerate);
+$("#btn-example").addEventListener("click", loadExampleAndRun);
+$("#btn-reset").addEventListener("click", loadExampleAndRun);
+$("#btn-unfold").addEventListener("click", () =>
+  openMachine($("#machine-body").style.display !== "block"));
+$("#btn-about").addEventListener("click", () => {
+  const el = $("#about");
+  const open = el.style.display !== "block";
+  el.style.display = open ? "block" : "none";
+  $("#btn-about").textContent = open ? "Method / About ▾" : "Method / About ▸";
+});
+$("#factors").addEventListener("input", updateReadouts);
+$("#n-prop").addEventListener("input", updateReadouts);
+document.querySelectorAll('input[name="magic-mode"]').forEach((r) =>
+  r.addEventListener("change", syncMagicVisibility));
+$("#derive-row").addEventListener("change", syncMagicVisibility);
+$("#sq-prev").addEventListener("click", () => setStep(G.current - 1));
+$("#sq-next").addEventListener("click", () => setStep(G.current + 1));
+$("#sq-slider").addEventListener("input", (e) => setStep(parseInt(e.target.value, 10)));
+$("#row-input").addEventListener("keydown", (e) => { if (e.key === "Enter") runPhase1(); });
+
+/* ------------------------------------------------------------------ boot */
+(async function boot() {
+  updateReadouts();
+  syncMagicVisibility();
+  setStatus("loading");
+  try {
+    pyodide = await loadPyodide();
+    const resp = await fetch("maderna_engine.py");
+    if (!resp.ok) throw new Error("Could not fetch maderna_engine.py (" + resp.status + ")");
+    await pyodide.runPythonAsync(await resp.text());
+    appendLog("Python runtime ready — maderna_engine.py loaded.");
+    $("#overlay").style.display = "none";
+    $("#btn-phase1").disabled = false;
+    $("#btn-generate").disabled = false;
+    setStatus("idle");
+    await loadExampleAndRun();   // open pre-loaded with the example
+  } catch (e) {
+    $("#overlay").innerHTML =
+      '<div><strong style="color:var(--error)">Failed to load the Python runtime.</strong><br>' +
+      '<span style="color:var(--text2);font-size:13px">' + e.message +
+      "<br>Check your connection and reload.</span></div>";
+    setStatus("error");
+    appendLog("Boot error: " + e.message);
+  }
+})();
+</script>
+</body>
+</html>
